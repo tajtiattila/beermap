@@ -128,10 +128,11 @@ func parsePubList(r io.Reader, gc geocode.Geocoder) ([]Pub, error) {
 func parsePub(gc geocode.Geocoder, title, addr, tags string, rest []string) (Pub, error) {
 	var p Pub
 
-	if _, err := fmt.Sscanf(title, "[%d]%s", &p.Num, &p.Title); err != nil {
+	if _, err := fmt.Sscanf(title, "[%d]", &p.Num); err != nil {
 		return Pub{}, errors.Wrapf(err, "error parsing title %q", title)
 	}
-	p.Title = strings.TrimSpace(p.Title)
+	i := strings.IndexRune(title, ']')
+	p.Title = strings.TrimSpace(title[i+1:])
 
 	p.Addr = strings.TrimSpace(strings.TrimRight(strings.TrimLeft(addr, "("), ")"))
 
