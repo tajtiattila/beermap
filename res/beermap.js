@@ -116,8 +116,7 @@ function startMap(mapData) {
     var marker = new google.maps.Marker({
         position: new google.maps.LatLng(p.lat, p.lng),
         map: map,
-        icon: svgCircleIcon(color, '#fff', p.label),
-        optimized: false
+        icon: svgCircleIcon(color, '#fff', p.label)
     });
     marker.addListener('click', function() {
       infowindow.setContent(p.content);
