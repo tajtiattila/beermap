@@ -94,7 +94,8 @@ function startMap(mapData) {
       }
   ];
 
-  map = new google.maps.Map(document.getElementById('map'), {
+  var mapElement = document.getElementById('map');
+  map = new google.maps.Map(mapElement, {
     styles: styles,
   });
   map.fitBounds(mapData.bounds);
@@ -104,7 +105,7 @@ function startMap(mapData) {
 
   var infowindow = new google.maps.InfoWindow();
 
-  mapData.pubs.forEach(function(p) {
+  var markers = mapData.pubs.map(function(p) {
     var color;
     if (p.closed) {
       color = "#f00";
@@ -115,14 +116,18 @@ function startMap(mapData) {
     }
     var marker = new google.maps.Marker({
         position: new google.maps.LatLng(p.lat, p.lng),
-        map: map,
         icon: svgCircleIcon(color, '#fff', p.label)
     });
     marker.addListener('click', function() {
       infowindow.setContent(p.content);
       infowindow.open(map, marker);
     });
+    return marker;
   });
+
+  markers.forEach(function(marker) {
+    marker.setMap(map);
+  })
 }
 
 function svgCircleIcon(circleFill, labelColor, label) {
