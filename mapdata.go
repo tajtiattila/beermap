@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"regexp"
 	"time"
 )
 
@@ -79,9 +80,18 @@ func servePubData(pubs []Pub) http.Handler {
 	})
 }
 
-var contentTmpl = template.Must(template.New("info").Parse(`<h1>[{{.NumStr}}] {{.Title}}</h1>
+var contentTmpl = template.Must(template.New("info").Funcs(template.FuncMap{
+	"addLinks": addLinks,
+}).Parse(`<h1>[{{.NumStr}}] {{.Title}}</h1>
 <p>{{.Addr}}</p>
 <p>{{range .Desc}}
-{{.}}<br>
+{{. | addLinks}}<br>
 {{end}}</p>
 `))
+
+var linkRe = regexp.MustCompile(`(http|ftp|https)://([\w\-_]+(?:(?:\.[\w\-_]+)+))([\w\-\.,@?^=%&amp;:/~\+#]*[\w\-\@?^=%&amp;/~\+#])?`)
+
+func addLinks(s string) template.HTML {
+	s = template.HTMLEscapeString(s)
+	return template.HTML(linkRe.ReplaceAllString(s, `<a target="pub" href="$0">$0</a>`))
+}
