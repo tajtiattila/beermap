@@ -85,7 +85,7 @@ func serveDirTemplate(path string, data interface{}) http.Handler {
 }
 
 func getPubList(fn, gmapsapikey string) ([]Pub, error) {
-	cacheDir, err := basedir.Cache.EnsureDir("beermap", 777)
+	cacheDir, err := basedir.Cache.EnsureDir("beermap", 0777)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't get cache dir")
 	}
