@@ -2,12 +2,15 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"html/template"
+	"image/color"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/tajtiattila/basedir"
@@ -40,6 +43,10 @@ func main() {
 		log.Fatalln("can't load pub list:", err)
 	}
 	log.Println(len(pubList), "pubs in list")
+
+	if err := writeKMZPubListFile("serlist.kmz", *res, pubList); err != nil {
+		log.Println(err)
+	}
 
 	td := struct {
 		GoogleMapsApiKey string
@@ -105,4 +112,58 @@ func getPubList(fn, gmapsapikey string) ([]Pub, error) {
 	defer f.Close()
 
 	return parsePubList(f, gc)
+}
+
+func writeKMZPubListFile(outname, res string, pubs []Pub) error {
+	r, err := NewIconRenderer(res)
+	if err != nil {
+		return err
+	}
+
+	f, err := os.Create(outname)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	kmz, err := NewKMZ(f, "serlist")
+	if err != nil {
+		return err
+	}
+
+	writeKMZPubList(kmz, pubs, r)
+
+	return kmz.Close()
+}
+
+func writeKMZPubList(kmz *KMZ, pubs []Pub, r *IconRenderer) {
+	for _, p := range pubs {
+		var c color.Color
+		//Kek 1e90ff, zold 9acd32, piros b22222
+		switch {
+		case p.Has("#closed"):
+			c = color.NRGBA{0xb2, 0x22, 0x22, 0xff}
+		case p.Has("#user"):
+			c = color.NRGBA{0x22, 0x8b, 0x22, 0xff}
+		default:
+			c = color.NRGBA{0x1e, 0x90, 0xff, 0xff}
+			//c = color.NRGBA{2, 136, 209, 255}
+		}
+		ci := CircleIcon{
+			Outline: color.White,
+			Fill:    c,
+			Shadow:  color.NRGBA{0, 0, 0, 73},
+			Text:    color.White,
+			Label:   fmt.Sprint(p.Num),
+		}
+		err := kmz.IconPlacemark(ci.Render(r), Placemark{
+			Title: fmt.Sprintf("[%03d] %s", p.Num, p.Title),
+			Desc:  p.Addr + "\n" + strings.Join(p.Desc, "\n"),
+			Lat:   p.Geo.Lat,
+			Long:  p.Geo.Long,
+		})
+		if err != nil {
+			log.Println(err)
+		}
+	}
 }
