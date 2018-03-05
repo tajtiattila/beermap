@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"html/template"
-	"image/color"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -44,7 +43,12 @@ func main() {
 	}
 	log.Println(len(pubList), "pubs in list")
 
-	if err := writeKMZPubListFile("serlist.kmz", *res, pubList); err != nil {
+	r, err := NewIconRenderer(*res)
+	if err != nil {
+		log.Fatalln("can't init icon renderer:", err)
+	}
+
+	if err := writeKMZPubListFile("serlist.kmz", pubList, r); err != nil {
 		log.Println(err)
 	}
 
@@ -55,7 +59,9 @@ func main() {
 	}
 	http.Handle("/", serveDirTemplate(*res, td))
 
-	http.Handle("/pubs.json", servePubData(pubList))
+	const pubIconPfx = "/pub-icon"
+	http.Handle("/pubs.json", servePubData(pubList, pubIconPfx))
+	http.Handle(pubIconPfx+"/", servePubIcons(pubList, r, pubIconPfx))
 
 	log.Println("listening on", *addr)
 	log.Println(http.ListenAndServe(*addr, nil))
@@ -114,12 +120,7 @@ func getPubList(fn, gmapsapikey string) ([]Pub, error) {
 	return parsePubList(f, gc)
 }
 
-func writeKMZPubListFile(outname, res string, pubs []Pub) error {
-	r, err := NewIconRenderer(res)
-	if err != nil {
-		return err
-	}
-
+func writeKMZPubListFile(outname string, pubs []Pub, r *IconRenderer) error {
 	f, err := os.Create(outname)
 	if err != nil {
 		return err
@@ -138,25 +139,7 @@ func writeKMZPubListFile(outname, res string, pubs []Pub) error {
 
 func writeKMZPubList(kmz *KMZ, pubs []Pub, r *IconRenderer) {
 	for _, p := range pubs {
-		var c color.Color
-		//Kek 1e90ff, zold 9acd32, piros b22222
-		switch {
-		case p.Has("#closed"):
-			c = color.NRGBA{0xb2, 0x22, 0x22, 0xff}
-		case p.Has("#user"):
-			c = color.NRGBA{0x22, 0x8b, 0x22, 0xff}
-		default:
-			c = color.NRGBA{0x1e, 0x90, 0xff, 0xff}
-			//c = color.NRGBA{2, 136, 209, 255}
-		}
-		ci := CircleIcon{
-			Outline: color.White,
-			Fill:    c,
-			Shadow:  color.NRGBA{0, 0, 0, 73},
-			Text:    color.White,
-			Label:   fmt.Sprint(p.Num),
-		}
-		err := kmz.IconPlacemark(ci.Render(r), Placemark{
+		err := kmz.IconPlacemark(getPubIcon(p, r), Placemark{
 			Title: fmt.Sprintf("[%03d] %s", p.Num, p.Title),
 			Desc:  p.Addr + "\n" + strings.Join(p.Desc, "\n"),
 			Lat:   p.Geo.Lat,

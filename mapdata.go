@@ -3,9 +3,14 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"html/template"
+	"image"
+	"image/color"
+	"image/png"
 	"log"
 	"net/http"
+	"path"
 	"regexp"
 	"time"
 )
@@ -26,12 +31,13 @@ type jpub struct {
 	Label   string  `json:"label"`
 	Lat     float64 `json:"lat"`
 	Long    float64 `json:"lng"`
+	Icon    string  `json:"icon"`
 	Visited bool    `json:"visited"`
 	Closed  bool    `json:"closed"`
 	Content string  `json:"content"`
 }
 
-func servePubData(pubs []Pub) http.Handler {
+func servePubData(pubs []Pub, iconpfx string) http.Handler {
 	var md mapData
 	for i, p := range pubs {
 		if i == 0 {
@@ -64,6 +70,7 @@ func servePubData(pubs []Pub) http.Handler {
 			Label:   p.NumStr(),
 			Lat:     p.Geo.Lat,
 			Long:    p.Geo.Long,
+			Icon:    path.Join(iconpfx, fmt.Sprintf("icon-%d.png", p.Num)),
 			Visited: p.Has("#user"),
 			Closed:  p.Has("#closed"),
 			Content: buf.String(),
@@ -94,4 +101,49 @@ var linkRe = regexp.MustCompile(`(http|ftp|https)://([\w\-_]+(?:(?:\.[\w\-_]+)+)
 func addLinks(s string) template.HTML {
 	s = template.HTMLEscapeString(s)
 	return template.HTML(linkRe.ReplaceAllString(s, `<a target="pub" href="$0">$0</a>`))
+}
+
+func getPubIcon(p Pub, r *IconRenderer) image.Image {
+	var c color.Color
+	//Kek 1e90ff, zold 9acd32, piros b22222
+	switch {
+	case p.Has("#closed"):
+		c = color.NRGBA{0xb2, 0x22, 0x22, 0xff}
+	case p.Has("#user"):
+		c = color.NRGBA{0x22, 0x8b, 0x22, 0xff}
+	default:
+		c = color.NRGBA{0x1e, 0x90, 0xff, 0xff}
+		//c = color.NRGBA{2, 136, 209, 255}
+	}
+	ci := CircleIcon{
+		Outline: color.White,
+		Fill:    c,
+		Shadow:  color.NRGBA{0, 0, 0, 73},
+		Text:    color.White,
+		Label:   fmt.Sprint(p.Num),
+	}
+	return ci.Render(r)
+}
+
+func servePubIcons(pubs []Pub, r *IconRenderer, pfx string) http.Handler {
+	icons := make(map[string][]byte)
+	for _, p := range pubs {
+		buf := new(bytes.Buffer)
+		err := png.Encode(buf, getPubIcon(p, r))
+		if err != nil {
+			log.Fatal(err)
+		}
+		icons[path.Join(pfx, fmt.Sprintf("icon-%d.png", p.Num))] = buf.Bytes()
+	}
+	now := time.Now()
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		p := req.URL.Path
+		raw, ok := icons[p]
+		if !ok {
+			log.Println(p)
+			http.NotFound(w, req)
+			return
+		}
+		http.ServeContent(w, req, path.Base(p), now, bytes.NewReader(raw))
+	})
 }

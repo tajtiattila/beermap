@@ -116,7 +116,11 @@ function startMap(mapData) {
     }
     var marker = new google.maps.Marker({
         position: new google.maps.LatLng(p.lat, p.lng),
-        icon: svgCircleIcon(color, '#fff', p.label)
+        //icon: svgCircleIcon(color, '#fff', p.label)
+        icon: {
+          url: p.icon,
+          scaledSize: new google.maps.Size(28, 28)
+        }
     });
     marker.addListener('click', function() {
       infowindow.setContent(p.content);
