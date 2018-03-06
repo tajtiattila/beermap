@@ -5,16 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
-	"image"
-	"image/color"
 	"image/png"
 	"log"
 	"net/http"
 	"path"
 	"regexp"
 	"time"
-
-	"github.com/tajtiattila/beermap/icon"
 )
 
 type mapData struct {
@@ -68,7 +64,7 @@ func servePubData(pubs []Pub, iconpfx string) http.Handler {
 			Icon string
 		}{
 			Pub:  p,
-			Icon: path.Join(iconpfx, fmt.Sprintf("icon-%d.png", p.Num)),
+			Icon: path.Join(iconpfx, fmt.Sprintf("icon-%s.png", p.Label)),
 		}
 		err := contentTmpl.Execute(buf, xp)
 		if err != nil {
@@ -112,29 +108,15 @@ func addLinks(s string) template.HTML {
 	return template.HTML(linkRe.ReplaceAllString(s, `<a target="pub" href="$0">$0</a>`))
 }
 
-func getPubIcon(p Pub, r *icon.Renderer) image.Image {
-	var c color.Color
-	//Kek 1e90ff, zold 9acd32, piros b22222
-	switch {
-	case p.Has("#closed"):
-		c = color.NRGBA{0xb2, 0x22, 0x22, 0xff}
-	case p.Has("#user"):
-		c = color.NRGBA{0x22, 0x8b, 0x22, 0xff}
-	default:
-		c = color.NRGBA{0x1e, 0x90, 0xff, 0xff}
-	}
-	return r.Render(icon.Circle, icon.SimpleColors(c), fmt.Sprint(p.Num))
-}
-
-func servePubIcons(pubs []Pub, r *icon.Renderer, pfx string) http.Handler {
+func servePubIcons(pubs []Pub, styler *Styler, pfx string) http.Handler {
 	icons := make(map[string][]byte)
 	for _, p := range pubs {
 		buf := new(bytes.Buffer)
-		err := png.Encode(buf, getPubIcon(p, r))
+		err := png.Encode(buf, styler.PubIcon(p))
 		if err != nil {
 			log.Fatal(err)
 		}
-		icons[path.Join(pfx, fmt.Sprintf("icon-%d.png", p.Num))] = buf.Bytes()
+		icons[path.Join(pfx, fmt.Sprintf("icon-%s.png", p.Label))] = buf.Bytes()
 	}
 	now := time.Now()
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {

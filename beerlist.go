@@ -40,16 +40,12 @@ type LatLong struct {
 }
 
 type Pub struct {
-	Num   int
+	Label string
 	Title string
 	Addr  string
 	Geo   LatLong
 	Tags  []string
 	Desc  []string
-}
-
-func (p Pub) NumStr() string {
-	return fmt.Sprintf("%03d", p.Num)
 }
 
 func (p Pub) Has(tag string) bool {
@@ -75,7 +71,7 @@ func (p Pub) WriteTo(w io.Writer) (n int, err error) {
 			n += m
 		}
 	}
-	prt("[%03d] %s\n", p.Num, p.Title)
+	prt("[%s] %s\n", p.Label, p.Title)
 	prt("(%s)\n", p.Addr)
 	if len(p.Tags) != 0 {
 		prt("%s\n", strings.Join(p.Tags, " "))
@@ -128,10 +124,12 @@ func parsePubList(r io.Reader, gc geocode.Geocoder) ([]Pub, error) {
 func parsePub(gc geocode.Geocoder, title, addr, tags string, rest []string) (Pub, error) {
 	var p Pub
 
-	if _, err := fmt.Sscanf(title, "[%d]", &p.Num); err != nil {
-		return Pub{}, errors.Wrapf(err, "error parsing title %q", title)
-	}
 	i := strings.IndexRune(title, ']')
+	if title[0] != '[' || i < 0 {
+		return Pub{}, errors.Errorf("error parsing title %q", title)
+	}
+	p.Label = strings.TrimSpace(title[1:i])
+
 	p.Title = strings.TrimSpace(title[i+1:])
 
 	p.Addr = strings.TrimSpace(strings.TrimRight(strings.TrimLeft(addr, "("), ")"))

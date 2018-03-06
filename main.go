@@ -13,7 +13,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/tajtiattila/basedir"
-	"github.com/tajtiattila/beermap/icon"
 	"github.com/tajtiattila/geocode"
 )
 
@@ -42,14 +41,17 @@ func main() {
 	if err != nil {
 		log.Fatalln("can't load pub list:", err)
 	}
+	if len(pubList) == 0 {
+		log.Fatalln("empty pub list")
+	}
 	log.Println(len(pubList), "pubs in list")
 
-	r, err := icon.NewRendererPath(filepath.Join(*res, "Roboto-Medium.ttf"))
+	styler, err := NewStylerPath(filepath.Join(*res, "iconstyle.json"))
 	if err != nil {
-		log.Fatalln("can't init icon renderer:", err)
+		log.Fatalln("can't init icon styler:", err)
 	}
 
-	if err := writeKMZPubListFile("serlist.kmz", pubList, r); err != nil {
+	if err := writeKMZPubListFile("serlist.kmz", pubList, styler); err != nil {
 		log.Println(err)
 	}
 
@@ -62,7 +64,7 @@ func main() {
 
 	const pubIconPfx = "/pub-icon"
 	http.Handle("/pubs.json", servePubData(pubList, pubIconPfx))
-	http.Handle(pubIconPfx+"/", servePubIcons(pubList, r, pubIconPfx))
+	http.Handle(pubIconPfx+"/", servePubIcons(pubList, styler, pubIconPfx))
 
 	log.Println("listening on", *addr)
 	log.Println(http.ListenAndServe(*addr, nil))
@@ -121,7 +123,7 @@ func getPubList(fn, gmapsapikey string) ([]Pub, error) {
 	return parsePubList(f, gc)
 }
 
-func writeKMZPubListFile(outname string, pubs []Pub, r *icon.Renderer) error {
+func writeKMZPubListFile(outname string, pubs []Pub, styler *Styler) error {
 	f, err := os.Create(outname)
 	if err != nil {
 		return err
@@ -133,15 +135,15 @@ func writeKMZPubListFile(outname string, pubs []Pub, r *icon.Renderer) error {
 		return err
 	}
 
-	writeKMZPubList(kmz, pubs, r)
+	writeKMZPubList(kmz, pubs, styler)
 
 	return kmz.Close()
 }
 
-func writeKMZPubList(kmz *KMZ, pubs []Pub, r *icon.Renderer) {
+func writeKMZPubList(kmz *KMZ, pubs []Pub, styler *Styler) {
 	for _, p := range pubs {
-		err := kmz.IconPlacemark(getPubIcon(p, r), Placemark{
-			Title: fmt.Sprintf("[%03d] %s", p.Num, p.Title),
+		err := kmz.IconPlacemark(styler.PubIcon(p), Placemark{
+			Title: fmt.Sprintf("[%s] %s", p.Label, p.Title),
 			Desc:  p.Addr + "\n" + strings.Join(p.Desc, "\n"),
 			Lat:   p.Geo.Lat,
 			Long:  p.Geo.Long,
