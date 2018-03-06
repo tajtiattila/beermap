@@ -8,7 +8,14 @@
     <link rel="stylesheet" type="text/css" href="style.css">
   </head>
   <body>
-    <div id="map"></div>
+    <div id="container">
+      <div id="sidebarcontainer">
+        <div id="sidebar">
+          <div id="sidebar-content"></div>
+        </div>
+      </div>
+      <div id="map"></div>
+    </div>
     <script src="beermap.js"></script>
     <script src="https://maps.googleapis.com/maps/api/js?key={{.GoogleMapsApiKey}}&callback=initMap"
         async defer></script>

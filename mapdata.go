@@ -28,7 +28,7 @@ type jbounds struct {
 }
 
 type jpub struct {
-	Label   string  `json:"label"`
+	Title   string  `json:"title"`
 	Lat     float64 `json:"lat"`
 	Long    float64 `json:"lng"`
 	Icon    string  `json:"icon"`
@@ -61,16 +61,23 @@ func servePubData(pubs []Pub, iconpfx string) http.Handler {
 		}
 
 		buf := new(bytes.Buffer)
-		err := contentTmpl.Execute(buf, p)
+		xp := struct {
+			Pub
+			Icon string
+		}{
+			Pub:  p,
+			Icon: path.Join(iconpfx, fmt.Sprintf("icon-%d.png", p.Num)),
+		}
+		err := contentTmpl.Execute(buf, xp)
 		if err != nil {
 			log.Fatal(err)
 		}
 
 		jp := jpub{
-			Label:   p.NumStr(),
+			Title:   p.Title,
 			Lat:     p.Geo.Lat,
 			Long:    p.Geo.Long,
-			Icon:    path.Join(iconpfx, fmt.Sprintf("icon-%d.png", p.Num)),
+			Icon:    xp.Icon,
 			Visited: p.Has("#user"),
 			Closed:  p.Has("#closed"),
 			Content: buf.String(),
@@ -89,7 +96,7 @@ func servePubData(pubs []Pub, iconpfx string) http.Handler {
 
 var contentTmpl = template.Must(template.New("info").Funcs(template.FuncMap{
 	"addLinks": addLinks,
-}).Parse(`<h1>[{{.NumStr}}] {{.Title}}</h1>
+}).Parse(`<h1><img src="{{.Icon}}" width="28" height="28">{{.Title}}</h1>
 <p>{{.Addr}}</p>
 <p>{{range .Desc}}
 {{. | addLinks}}<br>

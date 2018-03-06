@@ -237,7 +237,33 @@ function startMap(mapData) {
   var transitLayer = new google.maps.TransitLayer();
   transitLayer.setMap(map);
 
+  var listControlDiv = document.createElement('div');
+  listControlDiv.style.padding = "10px";
+  var listControl = new ListControl(listControlDiv, map);
+
+  listControlDiv.index = 1;
+  map.controls[google.maps.ControlPosition.TOP_LEFT].push(listControlDiv);
+
   var infowindow = new google.maps.InfoWindow();
+
+  var publist = document.getElementById("sidebar-content");
+  mapData.pubs.forEach(function(p) {
+    var div = document.createElement("div");
+    div.className = "publist-item";
+    var iconDiv = document.createElement("div");
+    iconDiv.className = "publist-icon";
+    var img = document.createElement("img");
+    img.src = p.icon;
+    img.width = "28";
+    img.height = "28";
+    iconDiv.appendChild(img);
+    div.appendChild(iconDiv);
+    var labelDiv = document.createElement("span");
+    labelDiv.className = "publist-label";
+    labelDiv.innerHTML = p.title;
+    div.appendChild(labelDiv);
+    publist.appendChild(div);
+  });
 
   var markers = mapData.pubs.map(function(p) {
     var marker = new google.maps.Marker({
@@ -259,5 +285,29 @@ function startMap(mapData) {
   })
 }
 
+function ListControl(controlDiv, map) {
+
+  // Set CSS for the control border.
+  var controlUI = document.createElement('div');
+  controlUI.className = "mapcontrol-ui";
+  controlUI.title = "Toggle pub list";
+  controlDiv.appendChild(controlUI);
+
+  // Set CSS for the control interior.
+  var controlText = document.createElement('div');
+  controlText.className = "mapcontrol-text";
+  controlText.innerHTML = "List";
+  controlUI.appendChild(controlText);
+
+  // Setup the click event listeners: simply set the map to Chicago.
+  controlUI.addEventListener('click', function() {
+    var sidebarcontainer = document.getElementById("sidebarcontainer");
+    if (sidebarcontainer.style.display != "block") {
+      sidebarcontainer.style.display = "block";
+    } else {
+      sidebarcontainer.style.display = "none";
+    }
+    google.maps.event.trigger(map, "resize");
+  });
 
 }

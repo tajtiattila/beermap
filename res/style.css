@@ -1,11 +1,62 @@
 /* Always set the map height explicitly to define the size of the div
  * element that contains the map. */
 #map {
+  flex: 1 0;
   height: 100%;
+}
+#container {
+  display: flex;
+  height: 100%;
+  width: 100%;
+}
+#sidebarcontainer {
+  display: none;
+  width: 20em;
+  height: 100%;
+}
+#sidebar {
+  height:100%;
+  overflow: hidden;
+}
+#sidebar-content {
+  height:100%;
+  margin: 0.5em;
+  overflow: auto;
 }
 /* Optional: Makes the sample page fill the window. */
 html, body {
+  font-family: Roboto,Arial,sans-serif;
   height: 100%;
   margin: 0;
   padding: 0;
 }
+.mapcontrol-ui {
+  background-color: #fff;
+  border: 2px solid #fff;
+  border-radius: 3px;
+  box-shadow: 0 2px 6px rgba(0,0,0,.3);
+  cursor: pointer;
+  float: left;
+  margin-bottom: 22px;
+  text-align: center;
+}
+.mapcontrol-text {
+  color: rgb(25,25,25);
+  font-size: 15px;
+  line-height: 25px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+.publist-item {
+  display: grid;
+  grid-template-columns: max-content auto;
+}
+.publist-icon {
+  grid-column: 1;
+}
+.publist-label {
+  padding-top: 0.3em;
+  padding-left: 0.5em;
+  grid-column: 2;
+}
+
