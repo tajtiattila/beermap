@@ -94,9 +94,12 @@ func servePubData(pubs []Pub, iconpfx string) http.Handler {
 
 var contentTmpl = template.Must(template.New("info").Funcs(template.FuncMap{
 	"addLinks": addLinks,
-}).Parse(`<h1><img src="{{.Icon}}" width="28" height="28">{{.Title}}</h1>
-<p>{{.Addr}}</p>
-<p>{{range .Desc}}
+}).Parse(`<h1 class="pubinfo-title">
+<span class="pubinfo-icon"><img src="{{.Icon}}"></span>
+<span class="pubinfo-titletext">{{.Title}}</span>
+</h1>
+<p class="pubinfo-addr">{{.Addr}}</p>
+<p class="pubinfo-desc">{{range .Desc}}
 {{. | addLinks}}<br>
 {{end}}</p>
 `))

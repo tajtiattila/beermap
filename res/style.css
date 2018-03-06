@@ -68,3 +68,13 @@ img.publist-iconimg {
   height: 28px;
   cursor: pointer;
 }
+.pubinfo-title {
+  display: flex;
+}
+.pubinfo-icon > img {
+  width: 28px;
+  height: 28px;
+}
+.pubinfo-titletext {
+  margin-left: 10px;
+}
