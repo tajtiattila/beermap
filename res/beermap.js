@@ -248,14 +248,30 @@ function startMap(mapData) {
 
   var publist = document.getElementById("sidebar-content");
   mapData.pubs.forEach(function(p) {
+    var marker = new google.maps.Marker({
+        position: new google.maps.LatLng(p.lat, p.lng),
+        icon: {
+          url: p.icon,
+          scaledSize: new google.maps.Size(28, 28)
+        },
+        map: map,
+    });
+    marker.addListener('click', function() {
+      infowindow.setContent(p.content);
+      infowindow.open(map, marker);
+    });
+
     var div = document.createElement("div");
     div.className = "publist-item";
     var iconDiv = document.createElement("div");
     iconDiv.className = "publist-icon";
     var img = document.createElement("img");
+    img.className = "publist-iconimg";
     img.src = p.icon;
-    img.width = "28";
-    img.height = "28";
+    $(img).click(function() {
+      infowindow.setContent(p.content);
+      infowindow.open(map, marker);
+    })
     iconDiv.appendChild(img);
     div.appendChild(iconDiv);
     var labelDiv = document.createElement("span");
@@ -264,25 +280,6 @@ function startMap(mapData) {
     div.appendChild(labelDiv);
     publist.appendChild(div);
   });
-
-  var markers = mapData.pubs.map(function(p) {
-    var marker = new google.maps.Marker({
-        position: new google.maps.LatLng(p.lat, p.lng),
-        icon: {
-          url: p.icon,
-          scaledSize: new google.maps.Size(28, 28)
-        }
-    });
-    marker.addListener('click', function() {
-      infowindow.setContent(p.content);
-      infowindow.open(map, marker);
-    });
-    return marker;
-  });
-
-  markers.forEach(function(marker) {
-    marker.setMap(map);
-  })
 }
 
 function ListControl(controlDiv, map) {
@@ -302,10 +299,10 @@ function ListControl(controlDiv, map) {
   // Setup the click event listeners: simply set the map to Chicago.
   controlUI.addEventListener('click', function() {
     var sidebarcontainer = document.getElementById("sidebarcontainer");
-    if (sidebarcontainer.style.display != "block") {
-      sidebarcontainer.style.display = "block";
+    if ($(sidebarcontainer).hasClass("hidden")) {
+      $(sidebarcontainer).removeClass("hidden");
     } else {
-      sidebarcontainer.style.display = "none";
+      $(sidebarcontainer).addClass("hidden");
     }
     google.maps.event.trigger(map, "resize");
   });
