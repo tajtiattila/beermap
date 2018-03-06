@@ -157,7 +157,7 @@ var kmltmp = template.Must(template.New("kmz").Funcs(template.FuncMap{
     <Placemark>
       <name>{{.Title | xmlCharData}}</name>
 {{- if .Desc}}
-      <description>{{.Desc | xmlCharData}}></description>
+      <description>{{.Desc | xmlCharData}}</description>
 {{- end}}
 {{- if .StyleID}}
       <styleUrl>#{{.StyleID}}</styleUrl>
