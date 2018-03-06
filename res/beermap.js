@@ -229,6 +229,8 @@ function startMap(mapData) {
   var mapElement = document.getElementById('map');
   map = new google.maps.Map(mapElement, {
     styles: styles,
+    mapTypeControl: false,
+    scaleControl: true
   });
   map.fitBounds(mapData.bounds);
 
