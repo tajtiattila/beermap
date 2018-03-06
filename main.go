@@ -13,6 +13,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/tajtiattila/basedir"
+	"github.com/tajtiattila/beermap/icon"
 	"github.com/tajtiattila/geocode"
 )
 
@@ -43,7 +44,7 @@ func main() {
 	}
 	log.Println(len(pubList), "pubs in list")
 
-	r, err := NewIconRenderer(*res)
+	r, err := icon.NewRendererPath(filepath.Join(*res, "Roboto-Medium.ttf"))
 	if err != nil {
 		log.Fatalln("can't init icon renderer:", err)
 	}
@@ -120,7 +121,7 @@ func getPubList(fn, gmapsapikey string) ([]Pub, error) {
 	return parsePubList(f, gc)
 }
 
-func writeKMZPubListFile(outname string, pubs []Pub, r *IconRenderer) error {
+func writeKMZPubListFile(outname string, pubs []Pub, r *icon.Renderer) error {
 	f, err := os.Create(outname)
 	if err != nil {
 		return err
@@ -137,7 +138,7 @@ func writeKMZPubListFile(outname string, pubs []Pub, r *IconRenderer) error {
 	return kmz.Close()
 }
 
-func writeKMZPubList(kmz *KMZ, pubs []Pub, r *IconRenderer) {
+func writeKMZPubList(kmz *KMZ, pubs []Pub, r *icon.Renderer) {
 	for _, p := range pubs {
 		err := kmz.IconPlacemark(getPubIcon(p, r), Placemark{
 			Title: fmt.Sprintf("[%03d] %s", p.Num, p.Title),

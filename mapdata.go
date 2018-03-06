@@ -13,6 +13,8 @@ import (
 	"path"
 	"regexp"
 	"time"
+
+	"github.com/tajtiattila/beermap/icon"
 )
 
 type mapData struct {
@@ -110,7 +112,7 @@ func addLinks(s string) template.HTML {
 	return template.HTML(linkRe.ReplaceAllString(s, `<a target="pub" href="$0">$0</a>`))
 }
 
-func getPubIcon(p Pub, r *IconRenderer) image.Image {
+func getPubIcon(p Pub, r *icon.Renderer) image.Image {
 	var c color.Color
 	//Kek 1e90ff, zold 9acd32, piros b22222
 	switch {
@@ -120,19 +122,11 @@ func getPubIcon(p Pub, r *IconRenderer) image.Image {
 		c = color.NRGBA{0x22, 0x8b, 0x22, 0xff}
 	default:
 		c = color.NRGBA{0x1e, 0x90, 0xff, 0xff}
-		//c = color.NRGBA{2, 136, 209, 255}
 	}
-	ci := CircleIcon{
-		Outline: color.White,
-		Fill:    c,
-		Shadow:  color.NRGBA{0, 0, 0, 73},
-		Text:    color.White,
-		Label:   fmt.Sprint(p.Num),
-	}
-	return ci.Render(r)
+	return r.Render(icon.Circle, icon.SimpleColors(c), fmt.Sprint(p.Num))
 }
 
-func servePubIcons(pubs []Pub, r *IconRenderer, pfx string) http.Handler {
+func servePubIcons(pubs []Pub, r *icon.Renderer, pfx string) http.Handler {
 	icons := make(map[string][]byte)
 	for _, p := range pubs {
 		buf := new(bytes.Buffer)
