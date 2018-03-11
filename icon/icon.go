@@ -6,11 +6,9 @@ import (
 	"image/color"
 	"image/draw"
 	"image/png"
-	"io"
 	"io/ioutil"
 	"log"
 	"math"
-	"os"
 
 	"github.com/golang/freetype"
 	"github.com/golang/freetype/truetype"
@@ -25,23 +23,17 @@ type Renderer struct {
 	Stroke  int // outer stroke width
 }
 
-func NewRendererPath(fontpath string) (*Renderer, error) {
-	f, err := os.Open(fontpath)
+func NewRendererFontPath(fontpath string) (*Renderer, error) {
+	fontdata, err := ioutil.ReadFile(fontpath)
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
 
-	return NewRenderer(f)
+	return NewRendererFont(fontdata)
 }
 
-func NewRenderer(r io.Reader) (*Renderer, error) {
-	raw, err := ioutil.ReadAll(r)
-	if err != nil {
-		return nil, errors.Wrap(err, "can't load font")
-	}
-
-	font, err := freetype.ParseFont(raw)
+func NewRendererFont(fontdata []byte) (*Renderer, error) {
+	font, err := freetype.ParseFont(fontdata)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't parse font")
 	}

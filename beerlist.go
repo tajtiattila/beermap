@@ -5,29 +5,30 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"log"
 	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/tajtiattila/geocode"
 )
 
-func parseMultiLine(r io.Reader, f func([]string) error) error {
+func parseMultiLine(r io.Reader, f func(lineno int, lines []string) error) error {
 	scanner := bufio.NewScanner(r)
 	var blk []string
+	lineno := 1
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" {
-			if err := f(blk); err != nil {
+			if err := f(lineno, blk); err != nil {
 				return err
 			}
 			blk = blk[:0]
 		} else {
 			blk = append(blk, line)
 		}
+		lineno++
 	}
 	if len(blk) != 0 {
-		if err := f(blk); err != nil {
+		if err := f(lineno, blk); err != nil {
 			return err
 		}
 	}
@@ -83,41 +84,53 @@ func (p Pub) WriteTo(w io.Writer) (n int, err error) {
 	return n, err
 }
 
-func parsePubList(r io.Reader, gc geocode.Geocoder) ([]Pub, error) {
+// IconBasename returns the icon filename to use with this pub.
+func (p Pub) IconBasename() string {
+	return fmt.Sprintf("icon-%s.png", p.Label)
+}
+
+func parsePubList(r io.Reader, gc geocode.Geocoder, errh func(err error) error) ([]Pub, error) {
 	var pubs []Pub
-	err := parseMultiLine(r, func(v []string) error {
+	seen := make(map[string]struct{})
+	err := parseMultiLine(r, func(lineno int, v []string) error {
 		var title, addr, tags string
 		var rest []string
 		for _, line := range v {
 			if len(line) == 0 {
 				continue
 			}
-			switch line[0] {
-			case '[':
+			switch {
+			case line[0] == '[' && title == "":
 				title = line
-			case '(':
+			case line[0] == '(' && addr == "":
 				addr = line
-			case '#':
-				tags = line
+			case line[0] == '#':
+				tags += " " + line
 			default:
 				rest = append(rest, line)
 			}
 		}
 
 		if title == "" || addr == "" {
-			log.Println("missing title/addr")
-			return nil
+			return errh(errors.Errorf("line %d: missing title/addr", lineno))
 		}
 
 		p, err := parsePub(gc, title, addr, tags, rest)
 		if err != nil {
-			log.Println(err)
-			return nil
+			return errh(errors.Wrapf(err, "line %d", lineno))
 		}
+
+		if _, dup := seen[p.Label]; dup {
+			return errh(errors.Errorf("line %d: duplicate label %q", lineno, p.Label))
+		}
+		seen[p.Label] = struct{}{}
 
 		pubs = append(pubs, p)
 		return nil
 	})
+	if err != nil {
+		err = errh(err)
+	}
 	return pubs, err
 }
 

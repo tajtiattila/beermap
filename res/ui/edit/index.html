@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Beermap</title>
+    <meta name="viewport" content="initial-scale=1.0">
+    <meta charset="utf-8">  </head>
+    <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="style.css">
+  </head>
+  <body>
+{{- if .Errors}}
+    <div class="errors">
+{{- range .Errors}}
+    <p>{{.}}</p>
+{{end -}}
+    </div>
+{{end -}}
+    <h1>Edit map</h1>
+    <form enctype="multipart/form-data" action="#" method="post">
+      <fieldset>
+        <p>
+          <input id="title" type="text" name="title" value="{{.Title}}">
+          <label for="title">Title</label>
+        </p>
+        <p>
+          <input id="listtxt" type="file" name="listtxt">
+          <label for="listtxt">List file</label>
+        </p>
+        <p>
+          <input id="iconstyle" type="file" name="iconstyle">
+          <label for="iconstyle">Icon style file</label>
+        </p>
+        <p>
+          <input id="mapstyle" type="file" name="mapstyle">
+          <label for="mapstyle">Google maps style</label>
+        </p>
+        <input type="submit">
+      </fieldset>
+    </form>
+  </body>
+</html>

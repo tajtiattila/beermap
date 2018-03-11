@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"html/template"
 	"image/png"
 	"log"
@@ -26,16 +25,15 @@ type jbounds struct {
 }
 
 type jpub struct {
+	Label   string  `json:"label"`
 	Title   string  `json:"title"`
 	Lat     float64 `json:"lat"`
 	Long    float64 `json:"lng"`
 	Icon    string  `json:"icon"`
-	Visited bool    `json:"visited"`
-	Closed  bool    `json:"closed"`
 	Content string  `json:"content"`
 }
 
-func servePubData(pubs []Pub, iconpfx string) http.Handler {
+func pubListJSON(pubs []Pub, iconpfx string) []byte {
 	var md mapData
 	for i, p := range pubs {
 		if i == 0 {
@@ -64,7 +62,7 @@ func servePubData(pubs []Pub, iconpfx string) http.Handler {
 			Icon string
 		}{
 			Pub:  p,
-			Icon: path.Join(iconpfx, fmt.Sprintf("icon-%s.png", p.Label)),
+			Icon: path.Join(iconpfx, p.IconBasename()),
 		}
 		err := contentTmpl.Execute(buf, xp)
 		if err != nil {
@@ -72,12 +70,11 @@ func servePubData(pubs []Pub, iconpfx string) http.Handler {
 		}
 
 		jp := jpub{
+			Label:   p.Label,
 			Title:   p.Title,
 			Lat:     p.Geo.Lat,
 			Long:    p.Geo.Long,
 			Icon:    xp.Icon,
-			Visited: p.Has("#user"),
-			Closed:  p.Has("#closed"),
 			Content: buf.String(),
 		}
 		md.Pubs = append(md.Pubs, jp)
@@ -86,6 +83,11 @@ func servePubData(pubs []Pub, iconpfx string) http.Handler {
 	if err != nil {
 		log.Fatal(err)
 	}
+	return raw
+}
+
+func servePubData(pubs []Pub, iconpfx string) http.Handler {
+	raw := pubListJSON(pubs, iconpfx)
 	now := time.Now()
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		http.ServeContent(w, req, "pubs.json", now, bytes.NewReader(raw))
@@ -111,15 +113,24 @@ func addLinks(s string) template.HTML {
 	return template.HTML(linkRe.ReplaceAllString(s, `<a target="pub" href="$0">$0</a>`))
 }
 
+// pubIconData generates PNG image data for pub using styler
+func pubIconData(pub Pub, styler *Styler) ([]byte, error) {
+	buf := new(bytes.Buffer)
+	err := png.Encode(buf, styler.PubIcon(pub))
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
 func servePubIcons(pubs []Pub, styler *Styler, pfx string) http.Handler {
 	icons := make(map[string][]byte)
 	for _, p := range pubs {
-		buf := new(bytes.Buffer)
-		err := png.Encode(buf, styler.PubIcon(p))
+		data, err := pubIconData(p, styler)
 		if err != nil {
 			log.Fatal(err)
 		}
-		icons[path.Join(pfx, fmt.Sprintf("icon-%s.png", p.Label))] = buf.Bytes()
+		icons[path.Join(pfx, p.IconBasename())] = data
 	}
 	now := time.Now()
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {

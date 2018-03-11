@@ -6,6 +6,7 @@ import (
 	"image"
 	"image/color"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -36,10 +37,12 @@ func NewStylerPath(fn string) (*Styler, error) {
 	}
 	defer f.Close()
 
-	return NewStyler(f, filepath.Dir(fn))
+	return NewStyler(f, func(fontname string) ([]byte, error) {
+		return ioutil.ReadFile(filepath.Join(filepath.Dir(fn), fontname))
+	})
 }
 
-func NewStyler(r io.Reader, resdir string) (*Styler, error) {
+func NewStyler(r io.Reader, readFont func(fn string) ([]byte, error)) (*Styler, error) {
 	var j struct {
 		Font      string  `json:"font"`
 		Styles    []Style `json:"styles"`
@@ -48,7 +51,11 @@ func NewStyler(r io.Reader, resdir string) (*Styler, error) {
 	if err := json.NewDecoder(r).Decode(&j); err != nil {
 		return nil, err
 	}
-	iconr, err := icon.NewRendererPath(filepath.Join(resdir, j.Font))
+	font, err := readFont(j.Font)
+	if err != nil {
+		return nil, err
+	}
+	iconr, err := icon.NewRendererFont(font)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't init icon renderer")
 	}

@@ -3,8 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"html/template"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -13,12 +12,15 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/tajtiattila/basedir"
+	"github.com/tajtiattila/beermap/icon"
+	"github.com/tajtiattila/beermap/keyvalue"
 	"github.com/tajtiattila/geocode"
 )
 
 func main() {
 	addr := flag.String("addr", ":8080", "default listen address")
 	res := flag.String("res", "./res", "resource path")
+	dbpath := flag.String("db", "./db", "database path")
 	flag.Parse()
 
 	gmapsapikey := os.Getenv("GOOGLEMAPS_APIKEY")
@@ -30,97 +32,51 @@ func main() {
 		log.Fatal("at most one arg needed")
 	}
 
-	var publist string
-	if flag.NArg() == 1 {
-		publist = flag.Arg(0)
-	} else {
-		publist = "serlist.txt"
-	}
-
-	pubList, err := getPubList(publist, gmapsapikey)
+	ir, err := icon.NewRendererFontPath(filepath.Join(*res, "Roboto-Medium.ttf"))
 	if err != nil {
-		log.Fatalln("can't load pub list:", err)
+		log.Fatalln("can't start icon renderer", err)
 	}
-	if len(pubList) == 0 {
-		log.Fatalln("empty pub list")
-	}
-	log.Println(len(pubList), "pubs in list")
 
-	styler, err := NewStylerPath(filepath.Join(*res, "iconstyle.json"))
+	db, err := keyvalue.OpenLevelDB(*dbpath)
 	if err != nil {
-		log.Fatalln("can't init icon styler:", err)
+		log.Fatalln("can't open db", err)
 	}
+	defer db.Close()
 
-	if err := writeKMZPubListFile("serlist.kmz", pubList, styler); err != nil {
-		log.Println(err)
+	mdb := &mapDB{db: db}
+
+	gc, closer, err := newGeocoder(gmapsapikey)
+	if err != nil {
+		log.Fatalln("can't start geocoder", err)
 	}
+	defer closer.Close()
 
-	td := struct {
-		GoogleMapsApiKey string
-	}{
-		gmapsapikey,
-	}
-	http.Handle("/", serveDirTemplate(*res, td))
+	editor := newEditor("/edit/", filepath.Join(*res, "ui/edit"), mdb, gc)
+	editor.defaultIconRenderer = ir
+	http.Handle("/edit/", editor)
 
-	const pubIconPfx = "/pub-icon"
-	http.Handle("/pubs.json", servePubData(pubList, pubIconPfx))
-	http.Handle(pubIconPfx+"/", servePubIcons(pubList, styler, pubIconPfx))
+	http.Handle("/map/", http.StripPrefix("/map",
+		mapHandler(filepath.Join(*res, "ui/map"), gmapsapikey, mdb)))
+
+	http.Handle("/", http.FileServer(http.Dir(filepath.Join(*res, "ui/root"))))
 
 	log.Println("listening on", *addr)
 	log.Println(http.ListenAndServe(*addr, nil))
 }
 
-func serveDirTemplate(path string, data interface{}) http.Handler {
-	const indexHtml = "index.html"
-	def := http.FileServer(http.Dir(path))
-	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		if req.URL.Path != "/" {
-			def.ServeHTTP(w, req)
-			return
-		}
-
-		src, err := ioutil.ReadFile(filepath.Join(path, indexHtml))
-		if err != nil {
-			log.Println("read template:", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		name := filepath.Base(path)
-		t, err := template.New(name).Parse(string(src))
-		if err != nil {
-			log.Println("parse template:", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		if err := t.Execute(w, data); err != nil {
-			log.Println("execute template:", err)
-		}
-	})
-}
-
-func getPubList(fn, gmapsapikey string) ([]Pub, error) {
+func newGeocoder(gmapsapikey string) (geocode.Geocoder, io.Closer, error) {
 	cacheDir, err := basedir.Cache.EnsureDir("beermap", 0777)
 	if err != nil {
-		return nil, errors.Wrap(err, "can't get cache dir")
+		return nil, nil, errors.Wrap(err, "can't get cache dir")
 	}
 
 	qc, err := geocode.LevelDB(filepath.Join(cacheDir, "geocode.leveldb"))
 	if err != nil {
-		return nil, errors.Wrap(err, "can't open geocache")
+		return nil, nil, errors.Wrap(err, "can't open geocache")
 	}
-	defer qc.Close()
 
-	gc := geocode.Cache(geocode.StdGoogle(gmapsapikey), qc)
-
-	f, err := os.Open(fn)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	return parsePubList(f, gc)
+	gc := geocode.OpenLocationCode(geocode.Cache(geocode.StdGoogle(gmapsapikey), qc))
+	return gc, qc, nil
 }
 
 func writeKMZPubListFile(outname string, pubs []Pub, styler *Styler) error {
