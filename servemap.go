@@ -28,10 +28,13 @@ func mapHandler(res, googlemapsapikey string, mdb *mapDB) http.Handler {
 		if p == "/" {
 			td := struct {
 				GoogleMapsApiKey string
-				Title            string
+
+				Title    string
+				Basename string
 			}{
 				googlemapsapikey,
 				mm.Title,
+				safeFileName(mm.Title),
 			}
 
 			const indexHtml = "index.html"
@@ -67,8 +70,29 @@ func mapHandler(res, googlemapsapikey string, mdb *mapDB) http.Handler {
 			return
 		}
 
+		if p == "/"+safeFileName(mm.Title)+".kmz" {
+			var buf bytes.Buffer
+			if err := writeKMZ(&buf, mdb.db, mm); err != nil {
+				log.Printf("error getting kmz %s: %v", mm.Key, err)
+				httpErrorCode(w, http.StatusInternalServerError)
+				return
+			}
+			http.ServeContent(w, req, path.Base(p), mm.ModTime, bytes.NewReader(buf.Bytes()))
+			return
+		}
+
 		dirh.ServeHTTP(w, rest)
 	})
+}
+
+func safeFileName(title string) string {
+	const forbid = `*."/\[]:;|=,`
+	return strings.Map(func(r rune) rune {
+		if strings.IndexRune(forbid, r) >= 0 {
+			return -1
+		}
+		return r
+	}, title)
 }
 
 func splitUIPath(r *http.Request) (mapKey string, sub *http.Request) {

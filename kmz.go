@@ -4,8 +4,6 @@ import (
 	"archive/zip"
 	"bytes"
 	"fmt"
-	"image"
-	"image/png"
 	"io"
 	"strings"
 	"text/template"
@@ -23,11 +21,11 @@ type KMZ struct {
 	z      *zip.Writer
 }
 
-func NewKMZ(w io.Writer, title string) (*KMZ, error) {
+func NewKMZ(w io.Writer, title string) *KMZ {
 	return &KMZ{
 		Title: title,
 		z:     zip.NewWriter(w),
-	}, nil
+	}
 }
 
 func (k *KMZ) Close() error {
@@ -53,7 +51,7 @@ type Placemark struct {
 	Lat, Long float64
 }
 
-func (k *KMZ) IconPlacemark(icon image.Image, pm Placemark) error {
+func (k *KMZ) IconPlacemark(png []byte, pm Placemark) error {
 	path := fmt.Sprintf("images/icon-%d.png", k.seq)
 	style := fmt.Sprintf("icon-%d-BEE1157", k.seq)
 	k.seq++
@@ -63,8 +61,8 @@ func (k *KMZ) IconPlacemark(icon image.Image, pm Placemark) error {
 		return errors.Wrap(err, "can't create image file in zip")
 	}
 
-	if err := png.Encode(f, icon); err != nil {
-		return errors.Wrap(err, "can't write png image into zip")
+	if _, err := f.Write(png); err != nil {
+		return errors.Wrap(err, "can't write image into zip")
 	}
 
 	k.Placemarks = append(k.Placemarks, kPlacemark{

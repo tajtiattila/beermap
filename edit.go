@@ -274,6 +274,15 @@ func (e *editor) handleUIMapSave(mm *mapMeta, batch keyvalue.Batch, form *multip
 
 	if newList {
 		batch.Set(listKey, listBytes)
+
+		srcKey := "src|" + mm.Key
+		src, err := json.Marshal(pubs)
+		if err != nil {
+			errh(errors.Wrap(err, "can't marshal src"))
+			return
+		}
+
+		batch.Set(srcKey, src)
 	}
 
 	var styleBytes []byte

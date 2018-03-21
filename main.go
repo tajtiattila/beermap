@@ -2,13 +2,11 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -85,35 +83,4 @@ func newGeocoder(gmapsapikey string) (geocode.Geocoder, io.Closer, error) {
 
 	gc := geocode.LatLong(geocode.OpenLocationCode(geocode.Cache(geocode.StdGoogle(gmapsapikey), qc)))
 	return gc, qc, nil
-}
-
-func writeKMZPubListFile(outname string, pubs []Pub, styler *Styler) error {
-	f, err := os.Create(outname)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	kmz, err := NewKMZ(f, "serlist")
-	if err != nil {
-		return err
-	}
-
-	writeKMZPubList(kmz, pubs, styler)
-
-	return kmz.Close()
-}
-
-func writeKMZPubList(kmz *KMZ, pubs []Pub, styler *Styler) {
-	for _, p := range pubs {
-		err := kmz.IconPlacemark(styler.PubIcon(p), Placemark{
-			Title: fmt.Sprintf("[%s] %s", p.Label, p.Title),
-			Desc:  p.Addr + "\n" + strings.Join(p.Desc, "\n"),
-			Lat:   p.Geo.Lat,
-			Long:  p.Geo.Long,
-		})
-		if err != nil {
-			log.Println(err)
-		}
-	}
 }
