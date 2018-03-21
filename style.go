@@ -210,33 +210,3 @@ type jStyle struct {
 	Shape string `json:"shape"`
 	Color string `json:"color"`
 }
-
-var defaultStyle = `[{
-	"name": "closed",
-	"cond":{
-		type: "tag",
-		value: "#closed"
-	},
-	"color": "#b22222",
-	"shape":"circle"
-}, {
-	"name": "visited",
-	"cond":{
-		type: "tag",
-		value: "#user"
-	},
-	"color": "#228b22",
-	"shape":"circle"
-}, {
-	"name": "hotel",
-	"cond":{
-		type: "tag",
-		value: "#hotel"
-	},
-	"color": "#878401",
-	"shape":"square"
-}, {
-	"name": "other",
-	"color": "#1e90ff",
-	"shape":"circle"
-}]`
