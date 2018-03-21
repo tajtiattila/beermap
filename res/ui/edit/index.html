@@ -16,6 +16,7 @@
     </div>
 {{end -}}
     <h1>Edit map</h1>
+    <p>Specify map elements here. Existing files don't have to be uploaded again.</p>
     <form enctype="multipart/form-data" action="#" method="post">
       <fieldset>
         <p>
@@ -37,5 +38,11 @@
         <input type="submit">
       </fieldset>
     </form>
+{{- range .Msg }}
+  <p>{{.}}</p>
+{{- end}}
+{{- if .MapLink }}
+  <a target="{{.MapTarget}}" href="{{.MapLink}}">Show map</a>
+{{- end }}
   </body>
 </html>

@@ -52,6 +52,8 @@ type mapMeta struct {
 	Title string `json:"title"`
 
 	ModTime time.Time `json:"modTime"`
+
+	PubCount int `json:"pubCount"`
 }
 
 func (mm mapMeta) styleKey() string {

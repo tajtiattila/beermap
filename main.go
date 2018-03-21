@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/tajtiattila/basedir"
@@ -45,6 +46,12 @@ func main() {
 
 	mdb := &mapDB{db: db}
 
+	fontcache := &FontCache{
+		db:     db,
+		prefix: "fontdata/",
+		maxAge: time.Hour,
+	}
+
 	gc, closer, err := newGeocoder(gmapsapikey)
 	if err != nil {
 		log.Fatalln("can't start geocoder", err)
@@ -53,6 +60,7 @@ func main() {
 
 	editor := newEditor("/edit/", filepath.Join(*res, "ui/edit"), mdb, gc)
 	editor.defaultIconRenderer = ir
+	editor.fontSrc = fontcache.Get
 	http.Handle("/edit/", editor)
 
 	http.Handle("/map/", http.StripPrefix("/map",
@@ -75,7 +83,7 @@ func newGeocoder(gmapsapikey string) (geocode.Geocoder, io.Closer, error) {
 		return nil, nil, errors.Wrap(err, "can't open geocache")
 	}
 
-	gc := geocode.OpenLocationCode(geocode.Cache(geocode.StdGoogle(gmapsapikey), qc))
+	gc := geocode.LatLong(geocode.OpenLocationCode(geocode.Cache(geocode.StdGoogle(gmapsapikey), qc)))
 	return gc, qc, nil
 }
 

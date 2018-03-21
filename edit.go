@@ -25,7 +25,12 @@ type editor struct {
 	prefix string
 
 	mdb *mapDB
-	gc  geocode.Geocoder
+
+	// gc is used to look up addresses
+	gc geocode.Geocoder
+
+	// fontSrc retursn raw TTF fonts
+	fontSrc func(fontname string) ([]byte, error)
 
 	defaultIconRenderer *icon.Renderer
 
@@ -38,6 +43,9 @@ func newEditor(prefix, resdir string, mdb *mapDB, gc geocode.Geocoder) *editor {
 		resdir: resdir,
 		mdb:    mdb,
 		gc:     gc,
+		fontSrc: func(fn string) ([]byte, error) {
+			return ioutil.ReadFile(filepath.Join("res", fn))
+		},
 
 		base: http.FileServer(http.Dir(resdir)),
 	}
@@ -153,6 +161,11 @@ func (e *editor) serveEdit(w http.ResponseWriter, req *http.Request, mm mapMeta,
 	td := struct {
 		Title  string
 		Errors []string
+
+		Msg []string
+
+		MapTarget string
+		MapLink   string
 	}{
 		Title: mm.Title,
 	}
@@ -161,6 +174,17 @@ func (e *editor) serveEdit(w http.ResponseWriter, req *http.Request, mm mapMeta,
 		e.handlePost(&mm, func(e error) {
 			td.Errors = append(td.Errors, e.Error())
 		}, req)
+		if len(td.Errors) == 0 {
+			td.Msg = append(td.Msg, "Upload successful.")
+		}
+	}
+
+	if mm.PubCount > 0 {
+		td.Msg = append(td.Msg, fmt.Sprintf("Map has %d points", mm.PubCount))
+		td.MapTarget = fmt.Sprintf("map-%s", mm.Key)
+		td.MapLink = fmt.Sprintf("../../map/%s/", mm.Key)
+	} else {
+		td.Msg = append(td.Msg, "This map is empty.")
 	}
 
 	if err := t.Execute(w, td); err != nil {
@@ -188,7 +212,7 @@ func (e *editor) handlePost(mm *mapMeta, errh func(error), req *http.Request) {
 	}
 
 	batch := e.mdb.db.Batch()
-	e.handleUIMapSave(*mm, batch, form, errh)
+	e.handleUIMapSave(mm, batch, form, errh)
 
 	if f, ok := form.File("mapstyle"); ok {
 		var l []interface{}
@@ -212,12 +236,10 @@ func (e *editor) handlePost(mm *mapMeta, errh func(error), req *http.Request) {
 	}
 }
 
-func (e *editor) handleUIMapSave(mm mapMeta, batch keyvalue.Batch, form *multipartForm, errh func(error)) {
+func (e *editor) handleUIMapSave(mm *mapMeta, batch keyvalue.Batch, form *multipartForm, errh func(error)) {
 	listFile, newList := form.File("listtxt")
 	styleFile, newStyle := form.File("iconstyle")
 
-	log.Println(len(listFile.Content), newList)
-	log.Println(len(styleFile.Content), newStyle)
 	if !newList && !newStyle {
 		return
 	}
@@ -248,6 +270,8 @@ func (e *editor) handleUIMapSave(mm mapMeta, batch keyvalue.Batch, form *multipa
 		}
 	}
 
+	mm.PubCount = len(pubs)
+
 	if newList {
 		batch.Set(listKey, listBytes)
 	}
@@ -264,10 +288,7 @@ func (e *editor) handleUIMapSave(mm mapMeta, batch keyvalue.Batch, form *multipa
 		}
 	}
 
-	styler, err := NewStyler(bytes.NewReader(styleBytes), func(fn string) ([]byte, error) {
-		// TODO(tajtiattila): fix this
-		return ioutil.ReadFile(filepath.Join("res", fn))
-	})
+	styler, err := NewStyler(bytes.NewReader(styleBytes), e.fontSrc)
 	if err != nil {
 		errh(err)
 	}
