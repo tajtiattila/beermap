@@ -293,7 +293,7 @@ func (e *editor) handleUIMapSave(mm *mapMeta, batch keyvalue.Batch, form *multip
 		var err error
 		styleBytes, err = db.Get(styleKey)
 		if err != nil {
-			errh(err)
+			errh(errors.Wrap(err, "icon style missing"))
 		}
 	}
 
@@ -334,6 +334,7 @@ func (e *editor) handleUIMapSave(mm *mapMeta, batch keyvalue.Batch, form *multip
 		if err != nil {
 			log.Fatal(err)
 		}
-		batch.Set("path|"+path.Join(mm.Key, p.IconBasename()), data)
+		iconKey := "path|" + path.Join(mm.Key, p.IconBasename())
+		batch.Set(iconKey, data)
 	}
 }
