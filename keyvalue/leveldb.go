@@ -43,10 +43,14 @@ func (l *levelDB) Close() error {
 }
 
 func (l *levelDB) Iterator(start, end string) Iterator {
+	var e []byte
+	if end != "" {
+		e = []byte(end)
+	}
 	return &ldbIt{
 		l.db.NewIterator(&util.Range{
 			Start: []byte(start),
-			Limit: []byte(end),
+			Limit: e,
 		}, nil)}
 }
 
