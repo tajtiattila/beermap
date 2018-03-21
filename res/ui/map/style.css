@@ -10,7 +10,8 @@
   width: 100%;
 }
 #sidebarcontainer {
-  width: 20em;
+  width: 80%;
+  max-width: 20em;
   height: 100%;
   transition: all .2s ease-out;
 }
