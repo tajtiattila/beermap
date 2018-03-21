@@ -2,11 +2,13 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -20,7 +22,15 @@ func main() {
 	addr := flag.String("addr", ":8080", "default listen address")
 	res := flag.String("res", "./res", "resource path")
 	dbpath := flag.String("db", "./db", "database path")
+	prefix := flag.String("prefix", "", "optional server prefix")
 	flag.Parse()
+
+	if p := *prefix; p != "" {
+		if !strings.HasPrefix(p, "/") {
+			p = "/" + p
+		}
+		serveHttpPrefix = p
+	}
 
 	gmapsapikey := os.Getenv("GOOGLEMAPS_APIKEY")
 	if gmapsapikey == "" {
@@ -59,14 +69,19 @@ func main() {
 	editor := newEditor("/edit/", filepath.Join(*res, "ui/edit"), mdb, gc)
 	editor.defaultIconRenderer = ir
 	editor.fontSrc = fontcache.Get
-	http.Handle("/edit/", editor)
+	httpHandle("/edit/", editor)
 
-	http.Handle("/map/", http.StripPrefix("/map",
+	httpHandle("/map/", http.StripPrefix("/map",
 		mapHandler(filepath.Join(*res, "ui/map"), gmapsapikey, mdb)))
 
-	http.Handle("/", http.FileServer(http.Dir(filepath.Join(*res, "ui/root"))))
+	httpHandle("/", http.FileServer(http.Dir(filepath.Join(*res, "ui/root"))))
 
-	log.Println("listening on", *addr)
+	var withPrefix string
+	if serveHttpPrefix != "" {
+		withPrefix = fmt.Sprintf("with prefix %q", serveHttpPrefix)
+	}
+	log.Printf("listening on %v%s", *addr, withPrefix)
+
 	log.Println(http.ListenAndServe(*addr, nil))
 }
 

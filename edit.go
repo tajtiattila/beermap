@@ -87,7 +87,7 @@ func (e *editor) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		var u url.URL
 		u = *req.URL
 		u.Path += "/"
-		http.Redirect(w, req, u.String(), http.StatusMovedPermanently)
+		httpRedirect(w, req, u.String(), http.StatusMovedPermanently)
 	case "/":
 		t, err := loadTemplate(filepath.Join(e.resdir, "index.html"))
 		if err != nil {
@@ -136,7 +136,7 @@ func (e *editor) serveNew(w http.ResponseWriter, req *http.Request) {
 	}
 
 	u := fmt.Sprintf("%s%s/?%s=%s", e.prefix, mm.Key, editPassName, mm.EditPass)
-	http.Redirect(w, req, u, http.StatusTemporaryRedirect)
+	httpRedirect(w, req, u, http.StatusTemporaryRedirect)
 }
 
 func (e *editor) serveEdit(w http.ResponseWriter, req *http.Request, mm mapMeta, t *template.Template) {

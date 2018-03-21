@@ -20,6 +20,23 @@ func httpErrorCode(w http.ResponseWriter, errc int) {
 	http.Error(w, m, errc)
 }
 
+var serveHttpPrefix string
+
+func httpHandle(path string, h http.Handler) {
+	http.Handle(serveHttpPrefix+path, http.StripPrefix(serveHttpPrefix, h))
+}
+
+func httpRedirect(w http.ResponseWriter, req *http.Request, u string, code int) {
+	if serveHttpPrefix != "" {
+		x, err := url.Parse(u)
+		if err == nil {
+			x.Path = serveHttpPrefix + x.Path
+		}
+		u = x.String()
+	}
+	http.Redirect(w, req, u, code)
+}
+
 func requestWithPath(r *http.Request, path string) *http.Request {
 	r2 := new(http.Request)
 	*r2 = *r
