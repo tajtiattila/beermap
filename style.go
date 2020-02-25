@@ -17,6 +17,7 @@ import (
 
 type Style struct {
 	Name   string
+	Ignore bool // ignore this style
 	Cond   Cond // condition to use this style
 
 	Shape icon.Drawable
@@ -69,7 +70,7 @@ func NewStyler(r io.Reader, readFont func(fn string) ([]byte, error)) (*Styler, 
 
 func (st *Styler) Visible(p Pub) bool {
 	for _, s := range st.styles {
-		if s.Cond(p) && s.Shape == nil {
+		if !s.Ignore && s.Cond(p) && s.Shape == nil {
 			return false
 		}
 	}
@@ -84,7 +85,7 @@ func (st *Styler) PubIcon(p Pub) image.Image {
 		}
 	}
 	for _, s := range st.styles {
-		if s.Cond(p) {
+		if !s.Ignore && s.Cond(p) {
 			return st.r.Render(s.Shape, icon.SimpleColors(s.Color), label)
 		}
 	}
@@ -100,6 +101,7 @@ func (s *Style) UnmarshalJSON(p []byte) error {
 	}
 
 	s.Name = j.Name
+	s.Ignore = j.Ignore
 
 	var err error
 	s.Cond, err = decodeCond(j.Cond)
@@ -217,6 +219,8 @@ func jsstring(m map[string]interface{}, key string) (string, bool) {
 
 type jStyle struct {
 	Name string `json:"name"`
+
+	Ignore bool `json:"ignore"`
 
 	Cond map[string]interface{} `json:"cond"`
 
