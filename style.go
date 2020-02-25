@@ -70,7 +70,7 @@ func NewStyler(r io.Reader, readFont func(fn string) ([]byte, error)) (*Styler, 
 
 func (st *Styler) Visible(p Pub) bool {
 	for _, s := range st.styles {
-		if !s.Ignore && s.Cond(p) && s.Shape == nil {
+		if !s.Ignore && s.Cond.Accept(p) && s.Shape == nil {
 			return false
 		}
 	}
@@ -85,14 +85,12 @@ func (st *Styler) PubIcon(p Pub) image.Image {
 		}
 	}
 	for _, s := range st.styles {
-		if !s.Ignore && s.Cond(p) {
+		if !s.Ignore && s.Cond.Accept(p) {
 			return st.r.Render(s.Shape, icon.SimpleColors(s.Color), label)
 		}
 	}
 	return st.r.Render(icon.Square, icon.SimpleColors(color.Black), label)
 }
-
-type Cond func(p Pub) bool
 
 func (s *Style) UnmarshalJSON(p []byte) error {
 	var j jStyle
@@ -129,30 +127,6 @@ func (s *Style) UnmarshalJSON(p []byte) error {
 	}
 
 	return nil
-}
-
-func decodeCond(m map[string]interface{}) (Cond, error) {
-	if len(m) == 0 {
-		return func(Pub) bool { return true }, nil
-	}
-
-	t, ok := jsstring(m, "type")
-	if !ok {
-		return nil, errors.New(`missing or invalid cond key "type"`)
-	}
-
-	if t != "tag" {
-		return nil, errors.Errorf("unknown cond type %q", t)
-	}
-
-	h, ok := jsstring(m, "value")
-	if !ok || h == "" || h[0] != '#' {
-		return nil, errors.New(`missing or invalid cond tag key "value"`)
-	}
-
-	return func(p Pub) bool {
-		return p.Has(h)
-	}, nil
 }
 
 func decodeOptionalColor(s string, def color.Color) (color.Color, error) {
@@ -222,7 +196,7 @@ type jStyle struct {
 
 	Ignore bool `json:"ignore"`
 
-	Cond map[string]interface{} `json:"cond"`
+	Cond interface{} `json:"cond"`
 
 	Shape string `json:"shape"`
 	Color string `json:"color"`

@@ -39,26 +39,17 @@ Example:
 		"font": "Roboto:500",
 		"styles": [{
 			"name": "closed",
-			"cond":{
-				type: "tag",
-				value: "#closed"
-			},
+			"cond": "#closed",
 			"color": "#b22222",
 			"shape":"circle"
 		}, {
 			"name": "visited",
-			"cond":{
-				type: "tag",
-				value: "#visited"
-			},
+			"cond": "#2016 or #2018 or #2019",
 			"color": "#228b22",
 			"shape":"circle"
 		}, {
 			"name": "hotel",
-			"cond":{
-				type: "tag",
-				value: "#hotel"
-			},
+			"cond": "#hotel",
 			"color": "#878401",
 			"shape":"square"
 		}, {
