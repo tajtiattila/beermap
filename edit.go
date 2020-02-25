@@ -179,12 +179,27 @@ func (e *editor) serveEdit(w http.ResponseWriter, req *http.Request, mm mapMeta,
 		}
 	}
 
+	msgf := func(format string, args ...interface{}) {
+		td.Msg = append(td.Msg, fmt.Sprintf(format, args...))
+	}
+
 	if mm.PubCount > 0 {
-		td.Msg = append(td.Msg, fmt.Sprintf("Map has %d points", mm.PubCount))
+		if mm.TotalPubCount > mm.PubCount {
+			msgf("Map has %d visible points out of %d total (%d being filtered)",
+				mm.PubCount, mm.TotalPubCount,
+				mm.TotalPubCount-mm.PubCount)
+		} else {
+			msgf("Map has %d points", mm.PubCount)
+		}
 		td.MapTarget = fmt.Sprintf("map-%s", mm.Key)
 		td.MapLink = fmt.Sprintf("../../map/%s/", mm.Key)
 	} else {
-		td.Msg = append(td.Msg, "This map is empty.")
+		if mm.TotalPubCount > mm.PubCount {
+			msgf("This map is empty because all %d points were filtered.",
+				mm.TotalPubCount)
+		} else {
+			msgf("This map is empty.")
+		}
 	}
 
 	if err := t.Execute(w, td); err != nil {
@@ -270,19 +285,10 @@ func (e *editor) handleUIMapSave(mm *mapMeta, batch keyvalue.Batch, form *multip
 		}
 	}
 
-	mm.PubCount = len(pubs)
+	mm.TotalPubCount = len(pubs)
 
 	if newList {
 		batch.Set(listKey, listBytes)
-
-		srcKey := "src|" + mm.Key
-		src, err := json.Marshal(pubs)
-		if err != nil {
-			errh(errors.Wrap(err, "can't marshal src"))
-			return
-		}
-
-		batch.Set(srcKey, src)
 	}
 
 	var styleBytes []byte
@@ -314,6 +320,27 @@ func (e *editor) handleUIMapSave(mm *mapMeta, batch keyvalue.Batch, form *multip
 	if newStyle {
 		batch.Set(styleKey, styleBytes)
 	}
+
+	// filter pub list
+	j := 0
+	for _, pub := range pubs {
+		if styler.Visible(pub) {
+			pubs[j] = pub
+			j++
+		}
+	}
+	pubs = pubs[:j]
+
+	mm.PubCount = len(pubs)
+
+	srcKey := "src|" + mm.Key
+	src, err := json.Marshal(pubs)
+	if err != nil {
+		errh(errors.Wrap(err, "can't marshal src"))
+		return
+	}
+
+	batch.Set(srcKey, src)
 
 	pfx := "path|" + mm.Key + "/"
 	it := db.Iterator(pfx, "")

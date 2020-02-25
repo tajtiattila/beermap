@@ -16,8 +16,9 @@ import (
 )
 
 type Style struct {
-	Name  string
-	Cond  Cond
+	Name   string
+	Cond   Cond // condition to use this style
+
 	Shape icon.Drawable
 	Color color.Color // shape fill
 }
@@ -66,6 +67,15 @@ func NewStyler(r io.Reader, readFont func(fn string) ([]byte, error)) (*Styler, 
 	}, nil
 }
 
+func (st *Styler) Visible(p Pub) bool {
+	for _, s := range st.styles {
+		if s.Cond(p) && s.Shape == nil {
+			return false
+		}
+	}
+	return true
+}
+
 func (st *Styler) PubIcon(p Pub) image.Image {
 	label := p.Label
 	if st.niceLabel {
@@ -102,6 +112,9 @@ func (s *Style) UnmarshalJSON(p []byte) error {
 		s.Shape = icon.Circle
 	case "square":
 		s.Shape = icon.Square
+	case "none":
+		// ignore color
+		return nil
 	case "":
 		return errors.New("missing shape")
 	default:
