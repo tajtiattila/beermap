@@ -122,25 +122,3 @@ func pubIconData(pub Pub, styler *Styler) ([]byte, error) {
 	}
 	return buf.Bytes(), nil
 }
-
-func servePubIcons(pubs []Pub, styler *Styler, pfx string) http.Handler {
-	icons := make(map[string][]byte)
-	for _, p := range pubs {
-		data, err := pubIconData(p, styler)
-		if err != nil {
-			log.Fatal(err)
-		}
-		icons[path.Join(pfx, p.IconBasename())] = data
-	}
-	now := time.Now()
-	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		p := req.URL.Path
-		raw, ok := icons[p]
-		if !ok {
-			log.Println(p)
-			http.NotFound(w, req)
-			return
-		}
-		http.ServeContent(w, req, path.Base(p), now, bytes.NewReader(raw))
-	})
-}
