@@ -30,8 +30,13 @@ TODO: use name if address is missing.
 
 Icon style is a json for rendering icons. The specified font must be available from Google fonts.
 
-TODO: add font option to individual styles and additional font sources.
-TODO: add glow/shadow settings, especially for dark maps.
+TODO
+
+* improved color management (outline, text, shape, shadow)
+* option to lighten/darken colors
+* icon opacity
+* add font option to individual styles and additional font sources.
+* add glow/shadow settings, especially for dark maps.
 
 Example:
 
