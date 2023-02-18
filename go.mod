@@ -10,7 +10,7 @@ require (
 	github.com/syndtr/goleveldb v1.0.0
 	github.com/tajtiattila/basedir v0.0.0-20170105095306-3e9c99555635
 	github.com/tajtiattila/geocode v0.0.0-20180321104415-c32c2d9fe5b4
-	golang.org/x/image v0.2.0 // indirect
+	golang.org/x/image v0.5.0 // indirect
 	golang.org/x/net v0.7.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
